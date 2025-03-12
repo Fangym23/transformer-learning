@@ -7,6 +7,7 @@ from sklearn.linear_model import Ridge
 from scipy.linalg import orth
 from neural_exploration import *
 import matplotlib.pyplot as plt
+from NeuralUCB_previous import*
 
 
 def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.1, alpha=1.0):
@@ -101,6 +102,7 @@ bandit = ContextualBandit(T, n_arms, n_features, reward_func, noise_std=noise_st
 
 regrets = np.empty((n_sim, T))
 
+#transfer learning
 for i in range(n_sim):
     bandit.reset_rewards()
     model = NeuralUCB(bandit,
@@ -121,18 +123,47 @@ for i in range(n_sim):
     model.run()
     regrets[i] = np.cumsum(model.regrets)
 
+#neuralucb
+neural_regrets = np.empty((n_sim, T))
+
+for i in range(n_sim):
+    bandit.reset_rewards()
+    neural_model = NeuralUCB_previous(bandit,
+                      hidden_size=hidden_size,
+                      reg_factor=1.0,
+                      delta=0.1,
+                      confidence_scaling_factor=confidence_scaling_factor,
+                      training_window=100,
+                      p=p,
+                      learning_rate=0.01,
+                      epochs=epochs,
+                      train_every=train_every,
+                      use_cuda=use_cuda,
+                     )
+    neural_model.run()
+    neural_regrets[i] = np.cumsum(neural_model.regrets)
+
+
 fig, ax = plt.subplots(figsize=(11, 4), nrows=1, ncols=1)
 
 t = np.arange(T)
 
 mean_regrets = np.mean(regrets, axis=0)
+neural_mean_regrets = np.mean(neural_regrets,axis=0)
 std_regrets = np.std(regrets, axis=0) / np.sqrt(regrets.shape[0])
-ax.plot(t, mean_regrets)
+std_neural = np.std(neural_regrets,axis=0)/np.sqrt(neural_regrets.shape[0])
+# transfer learning
+ax.plot(t, mean_regrets, label='transfer learning')
 ax.fill_between(t, mean_regrets - 2 * std_regrets, mean_regrets + 2 * std_regrets, alpha=0.15)
 
-ax.set_title('Cumulative regret')
+# 绘制第二条线：neural_mean_regrets
+ax.plot(t, neural_mean_regrets, label='NeuralUCB')
+ax.fill_between(t, neural_mean_regrets - 2 * std_neural, neural_mean_regrets + 2 * std_neural, alpha=0.15)
+
+ax.set_title('Cumulative Regret')
+ax.legend()  # 添加图例
 
 plt.tight_layout()
-plt.savefig('figures/neural_ucb_quad.jpg')
+plt.savefig('transfer learning and NeuralUCB_quad1.jpg')
 plt.show()
 

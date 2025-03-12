@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 # @Time: 2025/3/11 16:50
 # @Author: FANGYIMIN
-import numpy as np
-from sklearn.linear_model import Ridge
 from scipy.linalg import orth
 from neural_exploration import *
 import matplotlib.pyplot as plt
 from NeuralUCB_previous import*
+from sklearn.linear_model import LinearRegression
 
-
-def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.1, alpha=1.0):
+def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.1):
     """
     Train a Ridge Regression model for a multi-armed bandit problem.
 
@@ -20,7 +18,6 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         n_features (int): Dimension of feature vectors.
         n_samples (int): Number of samples per bandit.
         sigma (float): Standard deviation of Gaussian noise in rewards.
-        alpha (float): Regularization strength for Ridge Regression.
 
     Returns:
         model (numpy.ndarray): Trained model coefficients for each bandit.
@@ -33,7 +30,7 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         w_true /= np.linalg.norm(w_true)
 
         # Generate orthogonal arm feature vectors
-        arms = orth(np.random.randn(n_features, n_arms)).T  # Orthogonalized feature vectors
+        arms = np.random.randn(n_features, n_arms).T  # Orthogonalized feature vectors
 
         bandits.append({'w_true': w_true, 'arms': arms})
 
@@ -58,9 +55,9 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         y = np.array(y)
 
         # Train Ridge Regression model
-        ridge_model = Ridge(alpha=alpha, fit_intercept=False)
-        ridge_model.fit(X, y)
-        model.append(ridge_model.coef_)
+        linear_model = LinearRegression( fit_intercept=False)
+        linear_model.fit(X, y)
+        model.append(linear_model.coef_)
 
     return np.array(model)
 
@@ -71,7 +68,7 @@ n_arms = 8
 n_features = 8
 n_samples = 100
 historical_data = train_bandit_model(n_bandits, n_arms, n_features, n_samples)
-
+print(historical_data)
 
 
 #setting of the contextual bandit
@@ -164,6 +161,6 @@ ax.set_title('Cumulative Regret')
 ax.legend()  # 添加图例
 
 plt.tight_layout()
-plt.savefig('transfer learning and NeuralUCB_quad.jpg')
+plt.savefig('transfer learning and NeuralUCB_quad_linear_regression.jpg')
 plt.show()
 

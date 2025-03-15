@@ -7,7 +7,7 @@ from sklearn.linear_model import Ridge
 from scipy.linalg import orth
 from neural_exploration import *
 import matplotlib.pyplot as plt
-from NeuralUCB_previous import*
+from NeuralUCB import*
 
 
 def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.1, alpha=1.0):
@@ -66,7 +66,7 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
 
 
 #setting of the historical data
-n_bandits = 20
+n_bandits = 30
 n_arms = 8
 n_features = 8
 n_samples = 100

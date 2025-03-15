@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# @Time: 2025/3/15 14:19
+# @Author: FANGYIMIN
+
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # @Time: 2025/3/11 16:50
 # @Author: FANGYIMIN
+import numpy as np
+from sklearn.linear_model import Ridge
 from scipy.linalg import orth
 from neural_exploration import *
 import matplotlib.pyplot as plt
 from NeuralUCB import*
-from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
 
-def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.1):
+def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigma=0.01, alpha=1.0):
     """
     Train a Ridge Regression model for a multi-armed bandit problem.
 
@@ -18,24 +26,32 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         n_features (int): Dimension of feature vectors.
         n_samples (int): Number of samples per bandit.
         sigma (float): Standard deviation of Gaussian noise in rewards.
+        alpha (float): Regularization strength for Ridge Regression.
 
     Returns:
         model (numpy.ndarray): Trained model coefficients for each bandit.
+        source_feature (numpy.ndarray): True weights for each bandit.
+        mse_scores (numpy.ndarray): Mean squared error for each bandit.
+        r2_scores (numpy.ndarray): R-squared score for each bandit.
     """
     # Generate bandit data
     bandits = []
+    source_feature = []
     for _ in range(n_bandits):
         # Each bandit has its own true weights
         w_true = np.random.randn(n_features)
         w_true /= np.linalg.norm(w_true)
+        source_feature.append(w_true)
 
         # Generate orthogonal arm feature vectors
-        arms = np.random.randn(n_features, n_arms).T  # Orthogonalized feature vectors
+        arms = orth(np.random.randn(n_features, n_arms)).T  # Orthogonalized feature vectors
 
         bandits.append({'w_true': w_true, 'arms': arms})
 
     # Data collection and training
     model = []
+    mse_scores = []
+    r2_scores = []
     for i, bandit in enumerate(bandits):
         X = []
         y = []
@@ -46,7 +62,7 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         for _ in range(n_samples):
             arm_idx = np.random.choice(n_arms)
             x = arms[arm_idx]
-            mu = 10*np.dot(x, w_true)
+            mu = 10 * np.dot(x, w_true)
             reward = np.random.normal(mu, sigma)  # Add Gaussian noise
             X.append(x)
             y.append(reward)
@@ -55,21 +71,30 @@ def train_bandit_model(n_bandits=20, n_arms=8, n_features=8, n_samples=100, sigm
         y = np.array(y)
 
         # Train Ridge Regression model
-        linear_model = LinearRegression( fit_intercept=False)
-        linear_model.fit(X, y)
-        model.append(linear_model.coef_)
+        ridge_model = Ridge(alpha=alpha, fit_intercept=False)
+        ridge_model.fit(X, y)
 
-    return np.array(model)
+        # Predict on training data
+        y_pred = ridge_model.predict(X)
 
+        # Calculate evaluation metrics
+        mse = mean_squared_error(y, y_pred)
+        r2 = r2_score(y, y_pred)
+
+        # Store results
+        model.append(ridge_model.coef_)
+        mse_scores.append(mse)
+        r2_scores.append(r2)
+
+    return np.array(model), np.array(source_feature), np.array(mse_scores), np.array(r2_scores)
 
 #setting of the historical data
-n_bandits = 20
-n_arms = 8
+n_bandits = 5
+n_arms = 4
 n_features = 8
-n_samples = 100
-historical_data = train_bandit_model(n_bandits, n_arms, n_features, n_samples)
-print(historical_data)
-
+n_samples = 10
+historical_data,source_feature ,a,b= train_bandit_model(n_bandits, n_arms, n_features, n_samples)
+print(a)
 
 #setting of the contextual bandit
 T = int(5e2)
@@ -91,9 +116,8 @@ use_cuda = False
 
 
 ### mean reward function
-a = np.random.randn(n_features)
-a /= np.linalg.norm(a, ord=2)
-reward_func = lambda x: 100*np.dot(a, x)**2
+a = np.random.randn(n_bandits)
+reward_func = lambda x: np.dot(a, np.dot(source_feature,x))
 
 bandit = ContextualBandit(T, n_arms, n_features, reward_func, noise_std=noise_std, seed=SEED)
 
@@ -161,6 +185,6 @@ ax.set_title('Cumulative Regret')
 ax.legend()  # 添加图例
 
 plt.tight_layout()
-plt.savefig('transfer learning and NeuralUCB_quad_linear_regression.jpg')
+plt.savefig('transfer learning and NeuralUCB_quad.jpg')
 plt.show()
 
